@@ -1,0 +1,56 @@
+---
+# tasks file for ansible-docker-installer
+
+#UBUNTU:
+- name: Uninstall all conflicting packages
+  shell: for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do sudo apt-get remove $pkg; done
+  when: ansible_facts['distribution'] | lower == 'ubuntu'
+
+- name: Update the apt package index and install packages to allow apt to use a repository over HTTPS
+  apt:
+    update_cache: yes
+    name: ['ca-certificates', 'curl', 'gnupg']
+    state: present
+  when: ansible_facts['distribution'] | lower == 'ubuntu'
+
+- name: Create directory /etc/apt/keyrings
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  when: ansible_facts['distribution'] | lower == 'ubuntu'
+
+- name: Download and config key GPG of Docker
+  shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  when: ansible_facts['distribution'] | lower == 'ubuntu'
+
+- name: Change permissions of key GPG of docker
+  file:
+    path: /etc/apt/keyrings/docker.gpg
+    mode: '0644'
+  when: ansible_facts['distribution'] | lower == 'ubuntu'
+
+- name: Configurar el repositorio de Docker en /etc/apt/sources.list.d/docker.list
+  shell: >
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  args:
+    executable: /bin/bash
+  when: ansible_facts['distribution'] | lower == 'ubuntu'
+
+- name: Install latest docker version
+  apt:
+    update_cache: yes
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+  when: ansible_facts['distribution'] | lower == 'ubuntu'
+
+- name: add cloud-user to group docker
+  user:
+    name: '{{ user }}'
+    groups: docker
+    append: yes
