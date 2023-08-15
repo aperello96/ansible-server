@@ -1,0 +1,8 @@
+---
+
+- name: Install docker on machine
+  hosts: basic_server
+  become: true
+
+  roles:
+    - role: ansible-docker-installer
